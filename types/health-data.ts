@@ -1,11 +1,19 @@
+
+
+// types/health-data.ts
+
 export interface HealthData {
-  HeartRate: number
-  SpO2: number
-  acetone: number
-  timestamp: number
+  HeartRate: number;
+  SpO2: number;
+  acetone: number;
+  timestamp: number;
+  lastUpdate?: string;
 }
 
 export interface GeminiAnalysis {
-  glucoseRange: string
-  recommendations: string[]
+  glucoseEstimate: string;
+  glucoseRange: string;
+  glucoseStatus: string;
+  diabetesRisk: string;
+  recommendations: string[];
 }

@@ -148,8 +148,8 @@ export function RealTimeHealthData() {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Acetone</p>
                     <div className="flex items-center gap-2">
-                      <p className="text-2xl font-bold">{latestData.acetone}</p>
-                      <span className="text-sm text-muted-foreground">ppm</span>
+                      <p className="text-2xl font-bold">{(latestData.acetone*100).toFixed(2)}</p>
+                      <span className="text-sm text-muted-foreground">ppm x 100</span>
                       {previousData && getTrendIndicator(latestData.acetone, previousData.acetone)}
                     </div>
                   </div>

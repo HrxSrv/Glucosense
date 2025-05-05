@@ -12,7 +12,11 @@ import { ref, onValue } from "firebase/database"
 import type { HealthData } from "@/types/health-data"
 import type { GeminiAnalysis } from "@/types/health-data"
 import { analyzeHealthData } from "@/app/actions/gemini-actions"
-import { Download, ArrowRight } from "lucide-react"
+import { Download, ArrowRight, Plus, Minus } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Textarea } from "@/components/ui/textarea"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 interface HealthDataFormProps {
   onAnalysisComplete: (analysis: GeminiAnalysis) => void
@@ -25,6 +29,12 @@ export function HealthDataForm({ onAnalysisComplete }: HealthDataFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [realtimeData, setRealtimeData] = useState<HealthData | null>(null)
   const [pullDataSuccess, setPullDataSuccess] = useState(false)
+  
+  // New states for additional features
+  const [isPrediabetic, setIsPrediabetic] = useState(false)
+  const [testType, setTestType] = useState("random")
+  const [showAdditionalInfo, setShowAdditionalInfo] = useState(false)
+  const [additionalInfo, setAdditionalInfo] = useState("")
 
   // Listen for realtime data
   useEffect(() => {
@@ -44,10 +54,16 @@ export function HealthDataForm({ onAnalysisComplete }: HealthDataFormProps) {
     setIsLoading(true)
     
     try {
+      // Divide acetone by 100 as per requirement
+      const acetoneValue = Number.parseFloat(acetone) / 100
+      
       const analysis = await analyzeHealthData(
         Number.parseFloat(heartRate),
         Number.parseFloat(spO2),
-        Number.parseFloat(acetone),
+        acetoneValue,
+        isPrediabetic,
+        testType,
+        additionalInfo
       )
       onAnalysisComplete(analysis)
     } catch (error) {
@@ -61,7 +77,8 @@ export function HealthDataForm({ onAnalysisComplete }: HealthDataFormProps) {
     if (realtimeData) {
       setHeartRate(realtimeData.HeartRate.toFixed(1))
       setSpO2(realtimeData.SpO2.toFixed(1))
-      setAcetone(realtimeData.acetone.toString())
+      // Multiply by 100 for display but will be divided before sending
+      setAcetone((realtimeData.acetone * 100).toFixed(2))
       
       // Show success feedback
       setPullDataSuccess(true)
@@ -135,7 +152,7 @@ export function HealthDataForm({ onAnalysisComplete }: HealthDataFormProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="acetone">Acetone (ppm)</Label>
+            <Label htmlFor="acetone">Acetone (ppm × 100)</Label>
             <Input
               id="acetone"
               type="number"
@@ -144,7 +161,74 @@ export function HealthDataForm({ onAnalysisComplete }: HealthDataFormProps) {
               onChange={(e) => setAcetone(e.target.value)}
               required
             />
+            <p className="text-xs text-muted-foreground">
+              This is displayed as 100× the actual value. The system will automatically convert before analysis.
+            </p>
           </div>
+          
+          {/* Health Status Toggle */}
+          <div className="space-y-2 pt-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="prediabetic" className="text-sm font-medium">
+                Pre-diabetic Condition
+              </Label>
+              <Switch
+                id="prediabetic"
+                checked={isPrediabetic}
+                onCheckedChange={setIsPrediabetic}
+              />
+            </div>
+          </div>
+          
+          {/* Test Type Selection */}
+          <div className="space-y-2 pt-2">
+            <Label className="text-sm font-medium">Test Type</Label>
+            <RadioGroup value={testType} onValueChange={setTestType} className="flex space-x-4">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="fasting" id="fasting" />
+                <Label htmlFor="fasting">Fasting</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="random" id="random" />
+                <Label htmlFor="random">Random</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="postprandial" id="postprandial" />
+                <Label htmlFor="postprandial">Post-meal</Label>
+              </div>
+            </RadioGroup>
+          </div>
+          
+          {/* Additional Information Collapsible */}
+          <Collapsible 
+            open={showAdditionalInfo} 
+            onOpenChange={setShowAdditionalInfo}
+            className="w-full border rounded-md p-2"
+          >
+            <div className="flex items-center justify-between">
+              <Label htmlFor="additionalInfo" className="text-sm font-medium">
+                Additional Patient Information
+              </Label>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
+                  {showAdditionalInfo ? (
+                    <Minus className="h-4 w-4" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+            <CollapsibleContent className="mt-2">
+              <Textarea
+                id="additionalInfo"
+                placeholder="Enter any additional information about the patient (medical history, symptoms, etc.)"
+                className="resize-none"
+                value={additionalInfo}
+                onChange={(e) => setAdditionalInfo(e.target.value)}
+              />
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
         <CardFooter>
           <Button 
